@@ -3,7 +3,7 @@
 
 #include <hiredis.h>
 
-#include "vcmp20.h"
+#include "plugin.h"
 
 #define SERVER_NAME "ViceRP"
 #define SERVER_GAMEMODE "TDM RP 0.1"
