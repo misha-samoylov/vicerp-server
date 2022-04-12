@@ -111,7 +111,7 @@ void spawn_pickups()
 	uint8_t is_automatic;
 
 	world = 0;
-	quantity = 0;
+	quantity = 100;
 	alpha = 255;
 	is_automatic = 1;
 
