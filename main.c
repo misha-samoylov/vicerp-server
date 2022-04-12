@@ -41,6 +41,13 @@ void redis_auth()
 	freeReplyObject(reply);
 }
 
+int redis_flush()
+{
+	redisReply *reply;
+	reply = redisCommand(c, "FLUSHDB");
+	freeReplyObject(reply);
+}
+
 void redis_deinit()
 {
 	redisFree(c);
@@ -156,17 +163,20 @@ void spawn_pickups()
 	g_plugin_funcs->CreatePickup(366, world, quantity, -834.2, 740.6, 11.3, alpha, is_automatic);
 }
 
-uint8_t on_server_init()
+void init_skins()
 {
-	int err;
-
-	err = redis_init();
-	if (err) {
-		return 0;
+	int skins[] = { 12, 15, 33, 96, 131, 1, 2, 3, 4, 99 };
+	for (int i = 0; i < sizeof(skins) / sizeof(int); i++) {
+		if (is_skin_citizen(skins[i])) {
+			g_plugin_funcs->AddPlayerClass(i, COLOR_WHITE, skins[i], 335.674164, -242.812607, 29.646561, 1.575135, 2, 1, 17, 400, 21, 100);
+		} else {
+			g_plugin_funcs->AddPlayerClass(i, COLOR_YELLOW, skins[i], 508.949005, 510.883820, 12.106688, 3.138477, 4, 1, 17, 400, 19, 100);
+		}
 	}
+}
 
-	redis_auth();
-
+void init_server()
+{
 	g_plugin_funcs->SetServerName(SERVER_NAME);
 	g_plugin_funcs->SetGameModeText(SERVER_GAMEMODE);
 
@@ -180,17 +190,23 @@ uint8_t on_server_init()
 
 	g_plugin_funcs->SetServerOption(vcmpServerOptionJoinMessages, 0);
 	g_plugin_funcs->SetServerOption(vcmpServerOptionFriendlyFire, 0);
+}
 
-	spawn_pickups();
+uint8_t on_server_init()
+{
+	int err;
 
-	int skins[] = { 12, 15, 33, 96, 131, 1, 2, 3, 4, 99 };
-	for (int i = 0; i < sizeof(skins) / sizeof(int); i++) {
-		if (is_skin_citizen(skins[i])) {
-			g_plugin_funcs->AddPlayerClass(i, COLOR_WHITE, skins[i], 335.674164, -242.812607, 29.646561, 1.575135, 2, 1, 17, 400, 21, 100);
-		} else {
-			g_plugin_funcs->AddPlayerClass(i, COLOR_YELLOW, skins[i], 508.949005, 510.883820, 12.106688, 3.138477, 4, 1, 17, 400, 19, 100);
-		}
+	err = redis_init();
+	if (err) {
+		return 0;
 	}
+
+	redis_auth();
+	redis_flush();
+
+	init_server();
+	spawn_pickups();
+	init_skins();
 
 	return 1;
 }
