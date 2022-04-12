@@ -66,9 +66,9 @@ int redis_get_count_users_online()
 	int online_users;
 
 	reply = redisCommand(c,"SCARD online_users");
-    printf("GET online_users: %s\n", reply->str);
+	printf("GET online_users: %s\n", reply->str);
 	online_users = reply->integer;
-    freeReplyObject(reply);
+	freeReplyObject(reply);
 
 	return online_users;
 }
@@ -103,6 +103,59 @@ int is_skin_citizen(int32_t skin_id)
 	return ret;
 }
 
+void spawn_pickups()
+{
+	int32_t world;
+	int32_t quantity;
+	int32_t alpha;
+	uint8_t is_automatic;
+
+	world = 0;
+	quantity = 0;
+	alpha = 255;
+	is_automatic = 1;
+
+	g_plugin_funcs->CreatePickup(368, world, quantity, -855.5118, -631.2861, 11.3756, alpha, is_automatic); /* 24-7armor */
+	g_plugin_funcs->CreatePickup(368, world, quantity, 407.7466, -483.1101, 12.3432, alpha, is_automatic); /* copshoparmor */
+	g_plugin_funcs->CreatePickup(288, world, quantity, 311.0720, -238.6959, 38.3752, alpha, is_automatic); /* conssite flamethrower */
+	g_plugin_funcs->CreatePickup(368, world, quantity, 266.4264, -249.8750, 36.1315, alpha, is_automatic); /* conssite armour */
+	g_plugin_funcs->CreatePickup(366, world, quantity, 373.7430, -255.7513, 46.0797, alpha, is_automatic); /* conssite health */
+	g_plugin_funcs->CreatePickup(368, world, quantity, 341.0047, -230.0483, 38.3752, alpha, is_automatic); /* conssite armour */
+	g_plugin_funcs->CreatePickup(288, world, quantity, -990.6908, 263.9287, 8.8123, alpha, is_automatic); /* printunderground flamethrower */
+	g_plugin_funcs->CreatePickup(278, world, quantity, -988.6908, 263.9287, 8.8123, alpha, is_automatic); /* printunderground stubby */
+	g_plugin_funcs->CreatePickup(280, world, quantity, -986.6908, 263.9287, 8.8123, alpha, is_automatic); /* printunderground m4 */
+	g_plugin_funcs->CreatePickup(368, world, quantity, -1034.1990, 41.1718, 11.3544, alpha, is_automatic); /* nearpizzagrave armour */
+	g_plugin_funcs->CreatePickup(368, world, quantity, -1472.9331, -866.6178, 20.8979, alpha, is_automatic); /* airportarmour */
+	g_plugin_funcs->CreatePickup(277, world, quantity, -672.05, 749.44, 10.90, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(368, world, quantity, -671.05, 749.44, 10.90, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(278, world, quantity, -670.05, 749.44, 10.90, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -113.2, -975.7, 10.4, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -225.1, -1158.1, 9.1, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 456.2, -471.4, 16.6, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 377.4, 467.7, 11.6, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 469.6, 697.4, 11.7, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 385.3, 1210.9, 19.4, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 384.3, 756.6, 11.7, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 10.7, 1099.0, 16.6, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, 85.3, 402.7, 19.8, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, -711.7, -501.7, 11.3, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, -404, -588.0, 11.6, alpha, is_automatic); 
+	g_plugin_funcs->CreatePickup(366, world, quantity, -406.2503, -566.4947, 19.5804, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -478.1,  1438.5, 16.1, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -67,  1263.3, 25.1, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -821.8, 1144.8, 26.1, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -1139.4, 55.4, 11.2, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -1290.9, 91.9, 26.9, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -885.4, -483.4,  13.1, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -925.1, -638.3, 16.0, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -692.4, -1283.8, 11.1, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -655.1, -1506.3, 8.1, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -1399.4, -865.9, 20.9, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -822.6, 1137.3, 12.4, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -851.4, -78.8, 11.5, alpha, is_automatic);
+	g_plugin_funcs->CreatePickup(366, world, quantity, -834.2, 740.6, 11.3, alpha, is_automatic);
+}
+
 uint8_t on_server_init()
 {
 	int err;
@@ -127,6 +180,8 @@ uint8_t on_server_init()
 
 	g_plugin_funcs->SetServerOption(vcmpServerOptionJoinMessages, 0);
 	g_plugin_funcs->SetServerOption(vcmpServerOptionFriendlyFire, 0);
+
+	spawn_pickups();
 
 	int skins[] = { 12, 15, 33, 96, 131, 1, 2, 3, 4, 99 };
 	for (int i = 0; i < sizeof(skins) / sizeof(int); i++) {
