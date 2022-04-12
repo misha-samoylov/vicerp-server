@@ -15,6 +15,7 @@
 
 #define REDIS_SERVER "127.0.0.1"
 #define REDIS_PORT 6379
+#define REDIS_PASSWORD "foobared"
 
 PluginFuncs *g_plugin_funcs;
 redisContext *c;
@@ -36,7 +37,7 @@ int redis_init()
 void redis_auth()
 {
 	redisReply *reply;
-	reply = redisCommand(c, "AUTH foobared");
+	reply = redisCommand(c, "AUTH %s", REDIS_PASSWORD);
 	freeReplyObject(reply);
 }
 
@@ -144,64 +145,64 @@ void on_server_shutdown()
 	redis_deinit();
 }
 
-uint8_t on_player_request_class(int32_t playerId, int32_t offset)
+uint8_t on_player_request_class(int32_t player_id, int32_t offset)
 {
-	g_plugin_funcs->SetPlayerHeading(playerId, -1.557110);
+	g_plugin_funcs->SetPlayerHeading(player_id, -1.557110);
 
-	int32_t skin_id = g_plugin_funcs->GetPlayerSkin(playerId);
+	int32_t skin_id = g_plugin_funcs->GetPlayerSkin(player_id);
 
 	if (is_skin_citizen(skin_id)) {
-		g_plugin_funcs->SendGameMessage(playerId, 0, "citizen");
+		g_plugin_funcs->SendGameMessage(player_id, 0, "citizen");
 	} else {
-		g_plugin_funcs->SendGameMessage(playerId, 0, "police");
+		g_plugin_funcs->SendGameMessage(player_id, 0, "police");
 	}
 
 	return 1;
 }
 
-uint8_t on_player_command(int32_t playerId, const char* message)
+uint8_t on_player_command(int32_t player_id, const char* message)
 {
 	char player_name[64];
-	g_plugin_funcs->GetPlayerName(playerId, player_name, sizeof(player_name));
+	g_plugin_funcs->GetPlayerName(player_id, player_name, sizeof(player_name));
 
 	if (strcmp(message, "save") == 0) {
 		float x, y, z, angle;
 
-		g_plugin_funcs->GetPlayerPosition(playerId, &x, &y, &z);
-		angle = g_plugin_funcs->GetPlayerHeading(playerId);
+		g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
+		angle = g_plugin_funcs->GetPlayerHeading(player_id);
 
-		g_plugin_funcs->SendClientMessage(playerId, COLOR_GREY, "%f, %f, %f, %f", x, y, z, angle);
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, "%f, %f, %f, %f", x, y, z, angle);
 		printf("%f, %f, %f, %f", x, y, z, angle);
 
 		return 1;
 	}
 	else if (strcmp(message, "car") == 0) {
 		float x, y, z, angle;
-        g_plugin_funcs->GetPlayerPosition(playerId, &x, &y, &z);
+        g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
 		g_plugin_funcs->CreateVehicle(132, 0, x, y, z, 0.0, 1, 2);
 
-		g_plugin_funcs->SendClientMessage(playerId, COLOR_GREY, ">> %s spawned vehicle (/car)", player_name);
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s spawned vehicle (/car)", player_name);
 
 		return 1;
 	}
 	else if (strcmp(message, "heal") == 0) {
-		g_plugin_funcs->SetPlayerHealth(playerId, 100.0);
-		g_plugin_funcs->SendClientMessage(playerId, COLOR_GREY, ">> %s bought health (/heal)", player_name);
+		g_plugin_funcs->SetPlayerHealth(player_id, 100.0);
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought health (/heal)", player_name);
 
 		return 1;
 	}
 	else if (strcmp(message, "armour") == 0) {
-		g_plugin_funcs->SetPlayerArmour(playerId, 100.0);
-        g_plugin_funcs->SendClientMessage(playerId, COLOR_GREY, ">> %s bought armour (/armour)", player_name);
+		g_plugin_funcs->SetPlayerArmour(player_id, 100.0);
+        g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought armour (/armour)", player_name);
 
 		return 1;
 	} else if (strcmp(message, "online") == 0) {
 		int users_online = redis_get_count_users_online();
-        g_plugin_funcs->SendClientMessage(playerId, COLOR_GREY, "** pm >> Now online users: %d (/online)", users_online);
+        g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, "** pm >> Now online users: %d (/online)", users_online);
 
 		return 1;
 	} else {
-		g_plugin_funcs->SendClientMessage(playerId, COLOR_RED, "** pm >> Unknown command");
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, "** pm >> Unknown command");
 	}
 
 	return 0;

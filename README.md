@@ -6,5 +6,8 @@ Open source code vicerp-server.
 
 ## Dependencies
 * [VC-MP](https://vc-mp.org/)
-* Redis
-* make
+* [Redis](https://redis.io/)
+* [make](https://www.gnu.org/software/make/)
+
+## License
+MIT
