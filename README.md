@@ -8,6 +8,7 @@ Open source code vicerp-server. Server uses [Plugin SDK](https://forum.vc-mp.org
 * [VC-MP](https://vc-mp.org/)
 * [hiredis](https://redis.io/) (Redis)
 * [make](https://www.gnu.org/software/make/)
+* [Docker](https://www.docker.com/)
 
 ## License
 MIT
