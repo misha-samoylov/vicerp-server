@@ -13,7 +13,7 @@
 #define COLOR_WHITE 0xFFFFFFAA
 #define COLOR_YELLOW 0xFFFF00AA
 
-#define REDIS_SERVER "127.0.0.1"
+#define REDIS_SERVER "172.18.0.2"
 #define REDIS_PORT 6379
 #define REDIS_PASSWORD "foobared"
 
@@ -36,9 +36,9 @@ int redis_init()
 
 void redis_auth()
 {
-	redisReply *reply;
+	/* redisReply *reply;
 	reply = redisCommand(c, "AUTH %s", REDIS_PASSWORD);
-	freeReplyObject(reply);
+	freeReplyObject(reply); */
 }
 
 int redis_flush()
