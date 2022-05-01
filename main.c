@@ -71,14 +71,7 @@ int redis_init()
 	return 0;
 }
 
-void redis_auth()
-{
-	/* redisReply *reply;
-	reply = redisCommand(c, "AUTH %s", REDIS_PASSWORD);
-	freeReplyObject(reply); */
-}
-
-int redis_flush()
+void redis_flush()
 {
 	redisReply *reply;
 	reply = redisCommand(c, "FLUSHDB");
@@ -387,6 +380,7 @@ void init_vehicles()
 void init_skins()
 {
 	int skins[] = { 12, 15, 33, 96, 131, 1, 2, 3, 4, 99 };
+
 	for (int i = 0; i < sizeof(skins) / sizeof(int); i++) {
 		if (is_skin_citizen(skins[i])) {
 			g_plugin_funcs->AddPlayerClass(i, COLOR_WHITE, skins[i], 335.674164, -242.812607, 29.646561, 1.575135, 2, 1, 17, 400, 21, 100);
@@ -468,7 +462,6 @@ uint8_t on_server_init()
 		return 0;
 	}
 
-	redis_auth();
 	redis_flush();
 
 	init_server();
@@ -511,16 +504,14 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		angle = g_plugin_funcs->GetPlayerHeading(player_id);
 
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, "%f, %f, %f, %f", x, y, z, angle);
-		printf("%f, %f, %f, %f", x, y, z, angle);
 
 		return 1;
-	}
-	else if (strcmp(message, "heal") == 0) {
+	} else if (strcmp(message, "heal") == 0) {
 		g_plugin_funcs->SetPlayerHealth(player_id, 100.0);
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought health (/heal)", player_name);
 
 		return 1;
-	} else if (strncmp(message, "we", 2) == 0) {
+	} else if (strncmp(message, "we", strlen("we")) == 0) {
 		int32_t weapon_id = find_weapon_id_from_string(message);
 
 		if (weapon_id == -1) {
@@ -534,11 +525,10 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought weapon %s (/we)",
 				player_name, weapon_name);
-
-			return 1;
 		}
-	}
-	else if (strcmp(message, "armour") == 0) {
+
+		return 1;
+	} else if (strcmp(message, "armour") == 0) {
 		g_plugin_funcs->SetPlayerArmour(player_id, 100.0);
         g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought armour (/armour)", player_name);
 
