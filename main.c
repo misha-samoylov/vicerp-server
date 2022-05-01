@@ -724,7 +724,7 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 	if (strcmp(message, "help") == 0) {
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY,
-			"Commands: /dm /heal /armour /we /online");
+			"** pm >> Commands: /dm /heal /armour /we /online");
 		return 1;
 	}
 	else if (strcmp(message, "save") == 0) {
