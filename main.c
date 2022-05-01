@@ -406,7 +406,8 @@ int32_t get_weapon_id_from_string(const char *weapon_name)
 	count_weapons = sizeof(weapons) / sizeof(weapons[0]);
 
 	for (i = 0; i < count_weapons; i++) {
-		if (strncmp(weapon_name, weapons[i], 2) == 0) {
+		/* if (strncmp(weapon_name, weapons[i], 2) == 0) { */
+		if (strstr(weapon_name, weapons[i]) != NULL) {
 			weapon_id = i;
 			break;
 		}
@@ -532,7 +533,7 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	else if (strcmp(message, "heal") == 0) {
 		char msg[256];
 		float max_health;
-		
+
 		max_health = 100.0f;
 
 		g_plugin_funcs->SetPlayerHealth(player_id, max_health);
