@@ -517,15 +517,26 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 		return 1;
 	}
+	else if (strcmp(message, "dm") == 0) {
+		char msg[256];
+
+		g_plugin_funcs->SetPlayerPosition(player_id, -543.463013, 797.462585, 195.213089);
+		g_plugin_funcs->SetPlayerHeading(player_id, -1.765160);
+
+		sprintf(msg, ">> %s teleported to DM (/dm)", player_name);
+		send_client_message_to_all(COLOR_GREY, msg);
+
+		return 1;
+	}
 	else if (strcmp(message, "heal") == 0) {
 		char msg[256];
 		float max_health;
 		
 		max_health = 100.0f;
 
-		sprintf(msg, ">> %s bought health (/heal)", player_name);
-
 		g_plugin_funcs->SetPlayerHealth(player_id, max_health);
+
+		sprintf(msg, ">> %s bought health (/heal)", player_name);
 		send_client_message_to_all(COLOR_GREY, msg);
 
 		return 1;
