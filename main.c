@@ -12,6 +12,7 @@
 #define COLOR_GREY 0xAFAFAFAA
 #define COLOR_WHITE 0xFFFFFFAA
 #define COLOR_YELLOW 0xFFFF00AA
+#define COLOR_BLUE 0x0000FFFF
 
 #define REDIS_SERVER "172.18.0.2"
 #define REDIS_PORT 6379
@@ -19,6 +20,9 @@
 
 PluginFuncs *g_plugin_funcs;
 redisContext *c;
+
+int32_t skins_police[] = { 12, 15, 33, 96, 131 };
+int32_t skins_citizen[] = { 1, 2, 3, 4, 99 };
 
 const char weapons[][64] = {
 	{ "unarmed" },
@@ -123,18 +127,18 @@ void send_client_message_to_all(int32_t color, const char *msg)
 
 int is_skin_citizen(int32_t skin_id)
 {
+	int i;
 	int ret;
+	int count_skins;
 
-	switch(skin_id) {
-	case 1:
-	case 2:
-	case 3:
-	case 4:
-	case 99:
-		ret = 0;
-	break;
-	default:
-		ret = 1;
+	ret = 0;
+	count_skins = sizeof(skins_citizen) / sizeof(skins_citizen[0]);
+
+	for (i = 0; i < count_skins; i++) {
+		if (skin_id == skins_citizen[i]) {
+			ret = 1;
+			break;
+		}
 	}
 
 	return ret;
@@ -379,14 +383,16 @@ void init_vehicles()
 
 void init_skins()
 {
-	int skins[] = { 12, 15, 33, 96, 131, 1, 2, 3, 4, 99 };
+	for (int i = 0; i < sizeof(skins_citizen) / sizeof(skins_citizen[0]); i++) {
+		g_plugin_funcs->AddPlayerClass(i, COLOR_WHITE, skins_citizen[i],
+			335.674164, -242.812607, 29.646561, 1.575135,
+			2, 1, 17, 400, 21, 100);
+	}
 
-	for (int i = 0; i < sizeof(skins) / sizeof(int); i++) {
-		if (is_skin_citizen(skins[i])) {
-			g_plugin_funcs->AddPlayerClass(i, COLOR_WHITE, skins[i], 335.674164, -242.812607, 29.646561, 1.575135, 2, 1, 17, 400, 21, 100);
-		} else {
-			g_plugin_funcs->AddPlayerClass(i, COLOR_YELLOW, skins[i], 508.949005, 510.883820, 12.106688, 3.138477, 4, 1, 17, 400, 19, 100);
-		}
+	for (int i = 0; i < sizeof(skins_police) / sizeof(skins_police[0]); i++) {
+		g_plugin_funcs->AddPlayerClass(i, COLOR_BLUE, skins[i],
+			508.949005, 510.883820, 12.106688, 3.138477,
+			4, 1, 17, 400, 19, 100);
 	}
 }
 
