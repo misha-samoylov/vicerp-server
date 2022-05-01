@@ -503,7 +503,11 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	char player_name[64];
 	g_plugin_funcs->GetPlayerName(player_id, player_name, sizeof(player_name));
 
-	if (strcmp(message, "save") == 0) {
+	if (strcmp(message, "help") == 0) {
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, "Commands: /heal /armour /we /online");
+		return 1;
+	}
+	else if (strcmp(message, "save") == 0) {
 		float x, y, z, angle;
 
 		g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
@@ -512,39 +516,65 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, "%f, %f, %f, %f", x, y, z, angle);
 
 		return 1;
-	} else if (strcmp(message, "heal") == 0) {
-		g_plugin_funcs->SetPlayerHealth(player_id, 100.0);
-		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought health (/heal)", player_name);
+	}
+	else if (strcmp(message, "heal") == 0) {
+		char msg[256];
+		float max_health;
+		
+		max_health = 100.0f;
+
+		sprintf(msg, ">> %s bought health (/heal)", player_name);
+
+		g_plugin_funcs->SetPlayerHealth(player_id, max_health);
+		send_client_message_to_all(COLOR_GREY, msg);
 
 		return 1;
-	} else if (strncmp(message, "we", strlen("we")) == 0) {
-		int32_t weapon_id = find_weapon_id_from_string(message);
+	} 
+	else if (strncmp(message, "we", strlen("we")) == 0) {
+		int32_t weapon_id;
+		weapon_id = find_weapon_id_from_string(message);
 
 		if (weapon_id == -1) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 				"** pm >> Unknown weapon name. Example: /we colt");
 		} else {
-			g_plugin_funcs->GivePlayerWeapon(player_id, weapon_id, 100);
-
 			char *weapon_name;
+			char msg[256];
+			int32_t ammo;
+
+			ammo = 300;
+
+			g_plugin_funcs->GivePlayerWeapon(player_id, weapon_id, ammo);			
 			weapon_name = get_weapon_name_from_id(weapon_id);
 
-			g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought weapon %s (/we)",
-				player_name, weapon_name);
+			sprintf(msg, ">> %s bought weapon %s (/we)", player_name, weapon_name);
+			send_client_message_to_all(COLOR_GREY, msg);
 		}
 
 		return 1;
-	} else if (strcmp(message, "armour") == 0) {
-		g_plugin_funcs->SetPlayerArmour(player_id, 100.0);
-        g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought armour (/armour)", player_name);
+	}
+	else if (strcmp(message, "armour") == 0) {
+		float max_armour;
+		char msg[256];
+
+		max_armour = 100.0f;
+
+		g_plugin_funcs->SetPlayerArmour(player_id, max_armour);
+
+		sprintf(msg, ">> %s bought armour (/armour)", player_name);
+		send_client_message_to_all(COLOR_GREY, msg);
 
 		return 1;
-	} else if (strcmp(message, "online") == 0) {
-		int users_online = redis_get_count_users_online();
+	}
+	else if (strcmp(message, "online") == 0) {
+		int users_online;
+
+		users_online = redis_get_count_users_online();
         g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, "** pm >> Now online users: %d (/online)", users_online);
 
 		return 1;
-	} else {
+	}
+	else {
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, "** pm >> Unknown command");
 	}
 
