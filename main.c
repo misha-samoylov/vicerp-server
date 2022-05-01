@@ -432,15 +432,6 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 		return 1;
 	}
-	else if (strcmp(message, "car") == 0) {
-		float x, y, z, angle;
-        g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
-		g_plugin_funcs->CreateVehicle(132, 0, x, y, z, 0.0, 1, 2);
-
-		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s spawned vehicle (/car)", player_name);
-
-		return 1;
-	}
 	else if (strcmp(message, "heal") == 0) {
 		g_plugin_funcs->SetPlayerHealth(player_id, 100.0);
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought health (/heal)", player_name);
