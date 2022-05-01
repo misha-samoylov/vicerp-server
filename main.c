@@ -581,6 +581,12 @@ void on_player_disconnect(int32_t player_id, vcmpDisconnectReason reason)
 	redis_set_user_offline(player_name);
 }
 
+void on_player_death(int32_t player_id, int32_t killer_id, int32_t reason, vcmpBodyPart bodyPart)
+{
+	int32_t score = g_plugin_funcs->GetPlayerScore(killer_id);
+	g_plugin_funcs->SetPlayerScore(killer_id, score + 1);
+}
+
 unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs, PluginCallbacks* plugin_calls, PluginInfo* plugin_info)
 {
 	g_plugin_funcs = plugin_funcs;
@@ -595,6 +601,7 @@ unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs, PluginCallbacks* plugin_c
 	plugin_calls->OnPlayerSpawn = on_player_spawn;
 	plugin_calls->OnPlayerConnect = on_player_connect;
 	plugin_calls->OnPlayerDisconnect = on_player_disconnect;
+	plugin_calls->OnPlayerDeath = on_player_death;
 
 	return 1;
 }
