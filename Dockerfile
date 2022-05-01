@@ -3,7 +3,7 @@ FROM ubuntu:18.04
 # update packages
 RUN apt-get update -y && apt-get upgrade -y
 
-# install hiredis and redis-server
+# install hiredis (redis library)
 RUN apt-get install -y libhiredis0.13
 
 # create a user group 'xyzgroup'
@@ -17,7 +17,8 @@ USER appuser
 
 # copy files
 WORKDIR /home/appuser
-COPY . .
+RUN mkdir plugins
+COPY mpsvrrel64 .
 
 # open mapper port
 EXPOSE 8192
