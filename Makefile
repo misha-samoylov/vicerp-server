@@ -10,21 +10,28 @@ run:
 	./mpsvrrel64
 
 docker-build:
-	sudo docker build -t vicerp-server .
+	docker build -t vicerp-server .
 
 docker-run:
-	sudo docker run --net my-net -d --name instance-vicerp-server --rm -p 8192:8192/udp vicerp-server
+	docker run --net my-net \
+	-d \
+	--name instance-vicerp-server \
+	--rm \
+	-p 8192:8192/udp \
+	-v ${CURDIR}/plugins:/home/appuser/plugins:ro \
+	-v ${CURDIR}/server.cfg:/home/appuser/server.cfg:ro \
+	vicerp-server
 
 docker-stop:
-	sudo docker stop instance-vicerp-server
+	docker stop instance-vicerp-server
 
 docker-clean:
-	sudo docker rmi vicerp-server
+	docker rmi vicerp-server
 
 # install docker redis server and net
 docker-install-redis:
-	sudo docker pull redis
-	sudo docker network create my-net
+	docker pull redis
+	docker network create my-net
 
 docker-run-redis:
-	sudo docker run --net my-net -d --name redis-server --rm -p 6379:6379 redis
+	docker run --net my-net -d --name redis-server --rm -p 6379:6379 redis
