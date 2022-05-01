@@ -20,6 +20,43 @@
 PluginFuncs *g_plugin_funcs;
 redisContext *c;
 
+const char weapons[][64] = {
+	{ "unarmed" },
+	{ "brass knuckles" },
+	{ "screw driver" },
+	{ "golf club" },
+	{ "night stick" },
+	{ "knife" },
+	{ "baseball bat" },
+	{ "hammer" },
+	{ "meat cleaver" },
+	{ "machete" },
+	{ "katana" },
+	{ "chainsaw" },
+	{ "grenade" },
+	{ "remote detonation grenades" },
+	{ "tear gas" },
+	{ "molotov cocktails" },
+	{ "rocket" }, /* not used in game */
+	{ "colt45" },
+	{ "python" },
+	{ "shotgun" },
+	{ "spas12 shotgun" },
+	{ "stubby shotgun" },
+	{ "tec9" },
+	{ "uzi" },
+	{ "silenced ingram" },
+	{ "mp5" },
+	{ "m4" },
+	{ "ruger" },
+	{ "sniper rifle" },
+	{ "laser scope sniper rifle" },
+	{ "rocket launcher" },
+	{ "flame thrower" },
+	{ "m60" },
+	{ "minigun" }
+};
+
 int redis_init()
 {
 	c = redisConnect(REDIS_SERVER, REDIS_PORT);
@@ -359,6 +396,52 @@ void init_skins()
 	}
 }
 
+int32_t get_weapon_id_from_string(const char *weapon_name)
+{
+	int i;
+	int count_weapons;
+	int weapon_id;
+
+	weapon_id = -1;
+	count_weapons = sizeof(weapons) / sizeof(weapons[0]);
+
+	for (i = 0; i < count_weapons; i++) {
+		if (strncmp(weapon_name, weapons[i], 2) == 0) {
+			weapon_id = i;
+			break;
+		}
+	}
+
+	/* replace rocket weapon to rocker launcher weapon */
+	if (weapon_id == 16) {
+		weapon_id = 30;
+	}
+
+	return weapon_id;
+}
+
+char *get_weapon_name_from_id(int32_t weapon_id)
+{
+	return weapons[weapon_id];
+}
+
+int32_t find_weapon_id_from_string(char *message)
+{
+	int32_t weapon_id;
+
+	char delim[] = " ";
+	char *pch = strtok(message, delim);
+
+	weapon_id = -1;
+
+	while (pch != NULL) {
+		weapon_id = get_weapon_id_from_string(pch);
+		pch = strtok(NULL, delim);
+	}
+
+	return weapon_id;
+}
+
 void init_server()
 {
 	g_plugin_funcs->SetServerName(SERVER_NAME);
@@ -437,6 +520,23 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought health (/heal)", player_name);
 
 		return 1;
+	} else if (strncmp(message, "we", 2) == 0) {
+		int32_t weapon_id = find_weapon_id_from_string(message);
+
+		if (weapon_id == -1) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> Unknown weapon name. Example: /we colt");
+		} else {
+			g_plugin_funcs->GivePlayerWeapon(player_id, weapon_id, 100);
+
+			char *weapon_name;
+			weapon_name = get_weapon_name_from_id(weapon_id);
+
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s bought weapon %s (/we)",
+				player_name, weapon_name);
+
+			return 1;
+		}
 	}
 	else if (strcmp(message, "armour") == 0) {
 		g_plugin_funcs->SetPlayerArmour(player_id, 100.0);
