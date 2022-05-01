@@ -18,7 +18,6 @@
 
 #define REDIS_SERVER "172.18.0.2"
 #define REDIS_PORT 6379
-#define REDIS_PASSWORD "foobared"
 
 PluginFuncs *g_plugin_funcs;
 redisContext *g_redis_context;
