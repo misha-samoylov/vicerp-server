@@ -4,6 +4,7 @@
 #include <hiredis.h>
 
 #include "plugin.h"
+#include "config.h"
 
 #define SERVER_NAME "ViceRP"
 #define SERVER_GAMEMODE "TDM RP 0.2"
@@ -15,9 +16,6 @@
 #define COLOR_BLUE 0x0000FFFF
 
 #define UNKNOWN_KILLER_ID -1
-
-#define REDIS_SERVER "redis"
-#define REDIS_PORT 6379
 
 PluginFuncs *g_plugin_funcs;
 redisContext *g_redis_context;
