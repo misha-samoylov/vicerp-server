@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  vicerp-server:
+    build: ./
+    volumes:
+      - ./plugins:/home/appuser/plugins:ro
+      - ./server.cfg:/home/appuser/server.cfg:ro
+    ports:
+      - 8192:8192/udp
+    networks:
+      - default
+    depends_on:
+      - redis
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      - default
+    
+networks:
+  default:
+    driver: bridge

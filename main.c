@@ -16,7 +16,7 @@
 
 #define UNKNOWN_KILLER_ID -1
 
-#define REDIS_SERVER "172.18.0.2"
+#define REDIS_SERVER "redis"
 #define REDIS_PORT 6379
 
 PluginFuncs *g_plugin_funcs;
