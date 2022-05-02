@@ -23,15 +23,15 @@ make
 make run
 ````
 
-### docker-compose  
+### Docker
 ```console
 docker-compose build
 docker-compose up -d
 ````
 
-### Dependencies
+## Dependencies
 
-**Native build**
+**GNU/Linux build**
 * [Redis](https://redis.io/)
 * [hiredis](https://redis.io/)
 * [make](https://www.gnu.org/software/make/)
@@ -39,6 +39,9 @@ docker-compose up -d
 **Docker build**
 * [Docker](https://www.docker.com/)
 * [docker-compose](https://docs.docker.com/compose/)
+
+## Tested
+* Ubuntu 18.04 LTS
 
 ## License
 GNU General Public License (GPL), version 2
