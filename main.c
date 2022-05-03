@@ -850,11 +850,9 @@ void on_player_disconnect(int32_t player_id, vcmpDisconnectReason reason)
 void on_player_death(int32_t player_id, int32_t killer_id, int32_t reason,
 	vcmpBodyPart bodyPart)
 {
-	int32_t weapon_id;
 	char msg[256];
 	char player_name[64];
 
-	weapon_id = get_weapon_name_from_id(reason);
 	g_plugin_funcs->GetPlayerName(player_id, player_name, sizeof(player_name));
 
 	if (killer_id == UNKNOWN_KILLER_ID) {
@@ -864,9 +862,9 @@ void on_player_death(int32_t player_id, int32_t killer_id, int32_t reason,
 		char *weapon_name;
 		int32_t score;
 
-		weapon_name = get_weapon_name_from_id(weapon_id);
-		g_plugin_funcs->GetPlayerName(killer_id, killer_name,
+		g_plugin_funcs->GetPlayerName(killer_id, killer_name, 
 			sizeof(killer_name));
+		weapon_name = get_weapon_name_from_id(reason);
 
 		score = g_plugin_funcs->GetPlayerScore(killer_id);
 		g_plugin_funcs->SetPlayerScore(killer_id, score + 1);
