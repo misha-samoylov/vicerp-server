@@ -640,6 +640,26 @@ char *get_weapon_name_from_id(int32_t weapon_id)
 	return g_weapons[weapon_id];
 }
 
+int32_t get_command_param(char *msg, char *param)
+{
+	char *pch;
+	char delim[] = " ";
+
+	int32_t ret;
+	ret = -1;
+
+	pch = strtok(msg, delim);
+
+	while (pch != NULL) {
+		if (strcmp(pch, param) == 0) 
+			ret = 1;
+
+		pch = strtok(NULL, delim);
+	}
+
+	return ret;
+}
+
 int32_t find_weapon_id_from_string(char *message)
 {
 	int32_t weapon_id;
@@ -733,6 +753,30 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY,
 			"%f, %f, %f, %f", x, y, z, angle);
+
+		return 1;
+	}
+	else if (strncmp(message, "spawn", strlen("spawn")) == 0) {
+		char msg[256];
+
+		if (get_command_param(message, "6410") != -1) {
+			float x, y, z;
+			float angle;
+			float world;
+			float model;
+
+			angle = 0;
+			world = 0;
+			model = 6410;
+
+			g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
+			g_plugin_funcs->CreateVehicle(model, world, x, y, z, angle, 0, 0);
+
+			sprintf(msg, ">> %s spawned vehicle (/spawn)", player_name);
+			send_client_message_to_all(COLOR_GREY, msg);
+		} else {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, "** pm >> Cannot find vehicle");
+		}
 
 		return 1;
 	}

@@ -6,6 +6,7 @@ services:
     volumes:
       - ./plugins:/home/appuser/plugins:ro
       - ./server.cfg:/home/appuser/server.cfg:ro
+      - ./store:/home/appuser/store:ro
     ports:
       - 8192:8192/udp
     networks:
