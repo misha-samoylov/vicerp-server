@@ -7,9 +7,6 @@
 #include "plugin.h"
 #include "config.h"
 
-#define SERVER_NAME "ViceRP"
-#define SERVER_GAMEMODE "TDM RP 0.2"
-
 #define COLOR_RED 0xFF0000FF
 #define COLOR_GREY 0xAFAFAFAA
 #define COLOR_WHITE 0xFFFFFFAA
