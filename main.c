@@ -792,6 +792,26 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 		return 1;
 	}
+	else if (strcmp(message, "repair") == 0) {
+		char msg[256];
+		
+		float health;
+		int32_t vehicle_id;
+
+		vehicle_id = g_plugin_funcs->GetPlayerVehicleId(player_id);
+
+		if (g_plugin_funcs->GetLastError() == vcmpErrorNoSuchEntity) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, 
+				"** pm >> You need to be in vehicle");
+		}
+
+		g_plugin_funcs->SetVehicleHealth(vehicle_id, health);
+
+		sprintf(msg, ">> %s fixed a vehicle (/repair)", player_name);
+		send_client_message_to_all(COLOR_GREY, msg);
+
+		return 1;
+	}
 	else if (strcmp(message, "heal") == 0) {
 		char msg[256];
 		float max_health;
