@@ -680,8 +680,6 @@ int32_t find_weapon_id_from_string(char *message)
 
 void init_server()
 {
-	srand(time(NULL));
-
 	g_plugin_funcs->SetServerName(SERVER_NAME);
 	g_plugin_funcs->SetGameModeText(SERVER_GAMEMODE);
 
@@ -774,6 +772,9 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 			angle = 0;
 			world = 0;
 			model = 6410;
+
+			srand(time(NULL));
+
 			color1 = rand() % 108; /* random int between 0 and 108 */
 			color2 = rand() % 108; /* random int between 0 and 108 */
 
