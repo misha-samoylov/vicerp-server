@@ -757,34 +757,63 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	else if (strncmp(message, "spawn", strlen("spawn")) == 0) {
 		char msg[256];
 
-		if (get_command_param(message, "6410") != -1) {
-			float x, y, z;
-			float angle;
-			float world;
-			float model;
+		char cmd[64];
+		char param[64];
 
-			int32_t color1;
-			int32_t color2;
+		int32_t veh_id;
+		float x, y, z, angle;
+		int32_t color1, color2;
+		float world;
+		int finded;
 
-			angle = 0;
-			world = 0;
-			model = 6410;
+		finded = 0;
+		sscanf(message, "%s%s", cmd, param);
+		veh_id = atoi(param);
 
-			srand(time(NULL));
-
-			color1 = rand() % 108; /* random int between 0 and 108 */
-			color2 = rand() % 108; /* random int between 0 and 108 */
-
-			g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
-			g_plugin_funcs->CreateVehicle(model, world, x, y, z, angle, color1,
-				color2);
-
-			sprintf(msg, ">> %s spawned vehicle (/spawn)", player_name);
-			send_client_message_to_all(COLOR_GREY, msg);
-		} else {
+		if (veh_id == 0) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 				"** pm >> Cannot find vehicle");
+			return 1;
 		}
+
+		switch (veh_id)
+		{
+		case 6401:
+		case 6405:
+		case 6407:
+		case 6410:
+		case 6411:
+		case 6412:
+		case 6413:
+		case 6414:
+		case 6415:
+		case 6416:
+			finded = 1;
+			break;
+		default:
+			finded = 0;
+			break;
+		}
+
+		if (finded == 0) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> Cannot find vehicle");
+			return 1;
+		}
+
+		angle = 0;
+		world = 0;
+
+		srand(time(NULL));
+		color1 = rand() % 108; /* random int between 0 and 108 */
+		color2 = rand() % 108; /* random int between 0 and 108 */
+
+		g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
+		g_plugin_funcs->CreateVehicle(veh_id, world, x + 1, y, z + 1, angle,
+			color1,	color2);
+
+		sprintf(msg, ">> %s spawned vehicle %d (/spawn)", player_name, veh_id);
+		send_client_message_to_all(COLOR_GREY, msg);
 
 		return 1;
 	}
