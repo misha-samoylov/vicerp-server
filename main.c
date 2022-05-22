@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -679,6 +680,8 @@ int32_t find_weapon_id_from_string(char *message)
 
 void init_server()
 {
+	srand(time(NULL));
+
 	g_plugin_funcs->SetServerName(SERVER_NAME);
 	g_plugin_funcs->SetGameModeText(SERVER_GAMEMODE);
 
@@ -765,17 +768,24 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 			float world;
 			float model;
 
+			int32_t color1;
+			int32_t color2;
+
 			angle = 0;
 			world = 0;
 			model = 6410;
+			color1 = rand() % 108; /* random int between 0 and 108 */
+			color2 = rand() % 108; /* random int between 0 and 108 */
 
 			g_plugin_funcs->GetPlayerPosition(player_id, &x, &y, &z);
-			g_plugin_funcs->CreateVehicle(model, world, x, y, z, angle, 0, 0);
+			g_plugin_funcs->CreateVehicle(model, world, x, y, z, angle, color1,
+				color2);
 
 			sprintf(msg, ">> %s spawned vehicle (/spawn)", player_name);
 			send_client_message_to_all(COLOR_GREY, msg);
 		} else {
-			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, "** pm >> Cannot find vehicle");
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> Cannot find vehicle");
 		}
 
 		return 1;
