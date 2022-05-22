@@ -818,6 +818,7 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		}
 
 		g_plugin_funcs->SetVehicleHealth(vehicle_id, health);
+		g_plugin_funcs->SetVehicleDamageData(vehicle_id, 0);
 
 		sprintf(msg, ">> %s fixed a vehicle (/repair)", player_name);
 		send_client_message_to_all(COLOR_GREY, msg);
