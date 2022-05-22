@@ -794,10 +794,11 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	}
 	else if (strcmp(message, "repair") == 0) {
 		char msg[256];
-		
+
 		float health;
 		int32_t vehicle_id;
 
+		health = 1000.0;
 		vehicle_id = g_plugin_funcs->GetPlayerVehicleId(player_id);
 
 		if (g_plugin_funcs->GetLastError() == vcmpErrorNoSuchEntity) {
