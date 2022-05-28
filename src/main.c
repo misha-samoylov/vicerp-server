@@ -87,14 +87,14 @@ void redis_deinit()
 	redisFree(g_redis_context);
 }
 
-void redis_set_user_online(const char *player_name)
+void redis_set_user_online(char *player_name)
 {
 	redisReply *reply;
 	reply = redisCommand(g_redis_context, "SADD online_users %s", player_name);
 	freeReplyObject(reply);
 }
 
-void redis_set_user_offline(const char *player_name)
+void redis_set_user_offline(char *player_name)
 {
 	redisReply *reply;
 	reply = redisCommand(g_redis_context,"SREM online_users %s", player_name);
@@ -612,7 +612,7 @@ void init_skins()
 	}
 }
 
-int32_t get_weapon_id_from_string(const char *weapon_name)
+int32_t get_weapon_id_from_string(char *weapon_name)
 {
 	int i;
 	int count_weapons;
@@ -805,7 +805,7 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 	if (strcmp(message, "help") == 0) {
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY,
-			"** pm >> Commands: /dm /heal /armour /we /online");
+			"** pm >> Commands: /dm /heal /armour /we /online /repair");
 		return 1;
 	}
 	else if (strcmp(message, "save") == 0) {
