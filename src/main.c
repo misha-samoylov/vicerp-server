@@ -720,7 +720,6 @@ void db_deinit()
 	mysql_close(g_mysql_connection);
 }
 
-
 int is_player_registered(char *plr_name)
 {
 	char statement[512];
@@ -730,7 +729,6 @@ int is_player_registered(char *plr_name)
 	unsigned long len;
 	MYSQL_RES *result;
 
-	ret = 0;
 	len = mysql_real_escape_string(g_mysql_connection, to, plr_name,
 		strlen(plr_name));
 	to[len] = '\0';
