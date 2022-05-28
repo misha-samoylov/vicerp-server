@@ -178,10 +178,15 @@ void send_client_message_to_all(int32_t color, char *msg)
 {
 	int i;
 	uint32_t max_players;
+	uint8_t is_plr_connected;
+
 	max_players = g_plugin_funcs->GetMaxPlayers();
 
 	for (i = 0; i < max_players; i++) {
-		g_plugin_funcs->SendClientMessage(i, color, msg);
+		is_plr_connected = g_plugin_funcs->IsPlayerConnected(i);
+
+		if (is_plr_connected)
+			g_plugin_funcs->SendClientMessage(i, color, msg);
 	}
 }
 
@@ -1488,6 +1493,7 @@ void on_srv_frame(float elapsed_time)
 	int i;
 	uint32_t max_players;
 	int money;
+	uint8_t is_plr_connected;
 
 	hour = g_plugin_funcs->GetHour();
 	min = g_plugin_funcs->GetMinute();
@@ -1497,7 +1503,9 @@ void on_srv_frame(float elapsed_time)
 	/* every 00:00 players take money */
 	if (hour == 00 && min == 00) {
 		for (i = 0; i < max_players; i++) {
-			if (redis_is_plr_logged_in(i)) {
+			is_plr_connected = g_plugin_funcs->IsPlayerConnected(i);
+
+			if (is_plr_connected && redis_is_plr_logged_in(i)) {
 				inc_plr_cash(i, money);
 
 				g_plugin_funcs->SendClientMessage(i, COLOR_YELLOW,
