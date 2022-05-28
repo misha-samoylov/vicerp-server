@@ -1,5 +1,10 @@
+DROP TABLE IF EXISTS players;
+
 CREATE TABLE players (
-    id int,
-    name varchar(64),
-    password varchar(255)
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(64) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    bank INT NOT NULL DEFAULT 0,
+    cash INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
 );

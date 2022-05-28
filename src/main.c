@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <mysql.h>
 #include <hiredis.h>
@@ -8,6 +9,7 @@
 #include "plugin.h"
 #include "config.h"
 
+#define COLOR_GREEN 0x33AA33AA
 #define COLOR_RED 0xFF0000FF
 #define COLOR_GREY 0xAFAFAFAA
 #define COLOR_WHITE 0xFFFFFFAA
@@ -77,9 +79,7 @@ int redis_init()
 
 void redis_flush()
 {
-	redisReply *reply;
-	reply = redisCommand(g_redis_context, "FLUSHDB");
-	freeReplyObject(reply);
+	redisCommand(g_redis_context, "FLUSHDB");
 }
 
 void redis_deinit()
@@ -87,18 +87,37 @@ void redis_deinit()
 	redisFree(g_redis_context);
 }
 
-void redis_set_user_online(char *player_name)
+void redis_set_plr_logged_in(int32_t plr_id, char *plr_name)
+{
+	redisCommand(g_redis_context, "HSET user:%d name %s logged_in 1 "
+		"bank 0 cash 0", plr_id, plr_name);
+}
+
+bool redis_is_plr_logged_in(int32_t plr_id)
 {
 	redisReply *reply;
-	reply = redisCommand(g_redis_context, "SADD online_users %s", player_name);
+	bool ret;
+
+	ret = false;
+	reply = redisCommand(g_redis_context, "HGET user:%d logged_in", plr_id);
+
+	if (reply->type == REDIS_REPLY_STRING) 
+		if (strcmp(reply->str, "1") == 0)
+			ret = true;
+
 	freeReplyObject(reply);
+
+	return ret;
+}
+
+void redis_set_user_online(char *player_name)
+{
+	redisCommand(g_redis_context, "SADD online_users %s", player_name);
 }
 
 void redis_set_user_offline(char *player_name)
 {
-	redisReply *reply;
-	reply = redisCommand(g_redis_context,"SREM online_users %s", player_name);
-	freeReplyObject(reply);
+	redisCommand(g_redis_context,"SREM online_users %s", player_name);
 }
 
 int redis_get_count_users_online()
@@ -713,11 +732,72 @@ int db_init()
 		mysql_close(g_mysql_connection);
 		return 1;
 	}
+
+	return 0;
 }
 
 void db_deinit()
 {
 	mysql_close(g_mysql_connection);
+}
+
+int register_player_name(char *plr_name, char *passwd)
+{
+	char statement[512];
+	int num_rows;
+
+	char to[MAX_PLAYER_NAME + 1];
+	unsigned long len;
+
+	num_rows = 0;
+	len = mysql_real_escape_string(g_mysql_connection, to, plr_name,
+		strlen(plr_name));
+	to[len] = '\0';
+
+	snprintf(statement, sizeof(statement),
+		"INSERT INTO `players` (`name`, `password`) VALUES('%s', SHA1('%s'))",
+		to, passwd);
+
+	if (mysql_query(g_mysql_connection, statement) == 0) {
+		num_rows = mysql_affected_rows(g_mysql_connection);
+	} else {
+		printf("%s\n", mysql_error(g_mysql_connection));
+	}
+
+	return num_rows;
+}
+
+int is_valid_player_passwd(char *plr_name, char *passwd)
+{
+	char statement[512];
+	int num_rows;
+
+	char to[MAX_PLAYER_NAME + 1];
+	unsigned long len;
+	MYSQL_RES *result;
+
+	num_rows = 0;
+	len = mysql_real_escape_string(g_mysql_connection, to, plr_name,
+		strlen(plr_name));
+	to[len] = '\0';
+
+	snprintf(statement, sizeof(statement),
+		"SELECT `password` FROM `players` WHERE `name` = '%s' AND `password` = SHA1('%s') LIMIT 1",
+		to, passwd);
+
+	if (mysql_query(g_mysql_connection, statement) == 0) {
+		result = mysql_store_result(g_mysql_connection);
+
+		if (result != NULL) {
+			num_rows = mysql_num_rows(result);
+			mysql_free_result(result);
+		} else
+			printf("%s\n", mysql_error(g_mysql_connection));
+	} else {
+		printf("%s\n", mysql_error(g_mysql_connection));
+	}
+
+	return num_rows;
 }
 
 int is_player_registered(char *plr_name)
@@ -817,6 +897,58 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY,
 			"%f, %f, %f, %f", x, y, z, angle);
 
+		return 1;
+	}
+	else if (strncmp(message, "login", strlen("login")) == 0) {
+		char cmd[64];
+		char param[64];
+
+		sscanf(message, "%s%s", cmd, param);
+
+		if (!is_player_registered(player_name)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> That's nick-name is not registered");
+		} else if (redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You already logged in");
+		} else {
+			if (is_valid_player_passwd(player_name, param)) {
+				g_plugin_funcs->SendClientMessage(player_id, COLOR_GREEN,
+					"** pm >> You successfully logged in");
+
+				redis_set_plr_logged_in(player_id, player_name);
+			} else {
+				g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+					"** pm >> Password is not valid");
+			}
+		}
+	}
+	else if (strncmp(message, "register", strlen("register")) == 0) {
+		char cmd[64];
+		char param[64];
+		int ret;
+
+		ret = 0;
+		sscanf(message, "%s%s", cmd, param);
+
+		if (redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You cannot register because logged in account");
+		} else if (is_player_registered(player_name)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> That's nick-name is already registered");
+		} else {
+			ret = register_player_name(player_name, param);
+
+			if (ret) {
+				g_plugin_funcs->SendClientMessage(player_id, COLOR_GREEN,
+					"** pm >> You successfully registered. "
+					"Now you can logged in /login");
+			} else {
+				g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+					"** pm >> Unknown error. Cannot register account");
+			}
+		}
 		return 1;
 	}
 	else if (strncmp(message, "spawn", strlen("spawn")) == 0) {
@@ -1049,6 +1181,27 @@ void on_player_death(int32_t player_id, int32_t killer_id, int32_t reason,
 	send_client_message_to_all(COLOR_GREY, msg);
 }
 
+uint8_t on_player_request_spawn(int32_t plr_id)
+{
+	char plr_name[MAX_PLAYER_NAME];
+
+	if (!redis_is_plr_logged_in(plr_id)) {		
+		g_plugin_funcs->GetPlayerName(plr_id, plr_name, sizeof(plr_name));
+
+		if (!is_player_registered(plr_name)) {
+			g_plugin_funcs->SendClientMessage(plr_id, COLOR_RED,
+				"** pm >> You need to be registered /register");
+		} else {
+			g_plugin_funcs->SendClientMessage(plr_id, COLOR_RED,
+				"** pm >> You need to log in /login");
+		}
+
+		return 0;
+	}
+
+	return 1;
+}
+
 unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	PluginCallbacks* plugin_calls, PluginInfo* plugin_info)
 {
@@ -1060,6 +1213,7 @@ unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	plugin_calls->OnServerInitialise = on_server_init;
 	plugin_calls->OnServerShutdown = on_server_shutdown;
 	plugin_calls->OnPlayerRequestClass = on_player_request_class;
+	plugin_calls->OnPlayerRequestSpawn = on_player_request_spawn;
 	plugin_calls->OnPlayerCommand = on_player_command;
 	plugin_calls->OnPlayerSpawn = on_player_spawn;
 	plugin_calls->OnPlayerConnect = on_player_connect;
