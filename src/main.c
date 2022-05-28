@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <time.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -703,7 +704,7 @@ int32_t get_weapon_id_from_string(char *weapon_name)
 
 char *get_weapon_name_from_id(int32_t weapon_id)
 {
-	return g_weapons[weapon_id];
+	return (char*)g_weapons[weapon_id];
 }
 
 int32_t get_command_param(char *msg, char *param)
@@ -909,8 +910,6 @@ int db_get_plr_cash(int db_plr_id)
 int db_set_plr_cash(int db_plr_id, int amount)
 {
 	char query[512];
-	MYSQL_RES *result;
-	MYSQL_ROW row;
 	int val;
 
 	val = 0;
@@ -918,15 +917,9 @@ int db_set_plr_cash(int db_plr_id, int amount)
 		"UPDATE `players` SET `cash` = '%d' "
 		"WHERE `id` = '%d'", amount, db_plr_id);
 
-	if (mysql_query(g_mysql_connection, query) == 0) {
-		result = mysql_store_result(g_mysql_connection);
-
-		if (result != NULL) {
-			row = mysql_affected_rows(result);
-			val = atoi(row[0]);
-			mysql_free_result(result);
-		}
-	} else
+	if (mysql_query(g_mysql_connection, query) == 0)
+		val = mysql_affected_rows(g_mysql_connection);
+	else
 		printf("%s\n", mysql_error(g_mysql_connection));
 
 	return val;
@@ -1303,7 +1296,7 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		int cost;
 
 		cost = COST_WE;
-		weapon_id = find_weapon_id_from_string(message);
+		weapon_id = find_weapon_id_from_string((char*)message);
 
 		if (!redis_is_plr_logged_in(player_id)) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
