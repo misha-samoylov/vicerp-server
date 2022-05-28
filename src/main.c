@@ -14,6 +14,7 @@
 #define COLOR_YELLOW 0xFFFF00AA
 #define COLOR_BLUE 0x0000FFFF
 
+#define MAX_PLAYER_NAME 64
 #define UNKNOWN_KILLER_ID -1
 
 PluginFuncs *g_plugin_funcs;
@@ -106,8 +107,8 @@ int redis_get_count_users_online()
 	int online_users;
 
 	reply = redisCommand(g_redis_context, "SCARD online_users");
-	printf("GET online_users: %s\n", reply->str);
 	online_users = reply->integer;
+
 	freeReplyObject(reply);
 
 	return online_users;
@@ -695,16 +696,6 @@ void init_server()
 	g_plugin_funcs->SetServerOption(vcmpServerOptionFriendlyFire, 0);
 }
 
-void db_create_t_players()
-{
-	if (mysql_query(g_mysql_connection,
-		"CREATE TABLE players (id int, name varchar(255), password varchar(255))")) {
-		//fprintf(stderr, "%s\n", mysql_error(con));
-		//mysql_close(g_mysql_connection);
-		printf("query err\n");
-	}
-}
-
 int db_init()
 {
 	g_mysql_connection = mysql_init(NULL);
@@ -716,14 +707,12 @@ int db_init()
 		return 1;
   	}
 
-	if (mysql_real_connect(g_mysql_connection, "mysql", "root", "password",
-			"vicerp", 0, NULL, 0) == NULL) {
+	if (mysql_real_connect(g_mysql_connection, MYSQL_SERVER,
+			MYSQL_USER, MYSQL_PASSWORD,	MYSQL_DB, 0, NULL, 0) == NULL) {
 		printf("%s\n", mysql_error(g_mysql_connection));
 		mysql_close(g_mysql_connection);
 		return 1;
 	}
-  	
-	db_create_t_players();
 }
 
 void db_deinit()
@@ -731,44 +720,37 @@ void db_deinit()
 	mysql_close(g_mysql_connection);
 }
 
-#define MAX_PLAYER_NAME 64
 
-int is_player_registered(const char *plr_name)
+int is_player_registered(char *plr_name)
 {
 	char statement[512];
+	int num_rows;
 
 	char to[MAX_PLAYER_NAME + 1];
 	unsigned long len;
+	MYSQL_RES *result;
 
-	len = mysql_real_escape_string(g_mysql_connection, to, plr_name, strlen(plr_name));
+	ret = 0;
+	len = mysql_real_escape_string(g_mysql_connection, to, plr_name,
+		strlen(plr_name));
 	to[len] = '\0';
 
-	snprintf(statement, sizeof(statement), "SELECT `id` FROM `players` WHERE `name` = '%s' LIMIT 1", to);
-
-	/*printf("%s\n", statement);*/
+	snprintf(statement, sizeof(statement),
+		"SELECT `id` FROM `players` WHERE `name` = '%s' LIMIT 1", to);
 
 	if (mysql_query(g_mysql_connection, statement) == 0) {
-		MYSQL_RES *result = mysql_store_result(g_mysql_connection);
+		result = mysql_store_result(g_mysql_connection);
 
 		if (result != NULL) {
-			int num_rows = mysql_num_rows(result);
-			/*printf("num rows = %d\n", num_rows);*/
-
-			if (num_rows >= 1) {
-				return 1;
-			}
-
+			num_rows = mysql_num_rows(result);
 			mysql_free_result(result);
-		}
-		else {
+		} else
 			printf("%s\n", mysql_error(g_mysql_connection));
-		}
-	}
-	else {
+	} else {
 		printf("%s\n", mysql_error(g_mysql_connection));
 	}
 
-	return 0;
+	return num_rows;
 }
 
 uint8_t on_server_init()
@@ -776,15 +758,16 @@ uint8_t on_server_init()
 	int err;
 
 	err = db_init();
-	/* if (err) {
-		return 0;
-	} */
+	if (err) {
+		printf("Cannot init connection to mysql server\n");
+	}
 
 	err = redis_init();
-	/* if (err) {
-		return 0;
-	} */
+	if (err) {
+		printf("Cannot init connection to redis server\n");
+	}
 
+	/* clear redis db */
 	redis_flush();
 
 	init_server();
@@ -798,6 +781,7 @@ uint8_t on_server_init()
 void on_server_shutdown()
 {
 	redis_deinit();
+	db_deinit();
 }
 
 uint8_t on_player_request_class(int32_t player_id, int32_t offset)
