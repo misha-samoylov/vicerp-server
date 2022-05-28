@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <mysql.h>
 #include <hiredis.h>
 
 #include "plugin.h"
@@ -17,6 +18,7 @@
 
 PluginFuncs *g_plugin_funcs;
 redisContext *g_redis_context;
+MYSQL *g_mysql_connection;
 
 int32_t g_skins_citizen[] = { 12, 15, 33, 96, 131 };
 int32_t g_skins_police[] = { 1, 2, 3, 4, 99 };
@@ -693,14 +695,95 @@ void init_server()
 	g_plugin_funcs->SetServerOption(vcmpServerOptionFriendlyFire, 0);
 }
 
+void db_create_t_players()
+{
+	if (mysql_query(g_mysql_connection,
+		"CREATE TABLE players (id int, name varchar(255), password varchar(255))")) {
+		//fprintf(stderr, "%s\n", mysql_error(con));
+		//mysql_close(g_mysql_connection);
+		printf("query err\n");
+	}
+}
+
+int db_init()
+{
+	g_mysql_connection = mysql_init(NULL);
+
+	printf("MySQL client version: %s\n", mysql_get_client_info());
+
+	if (g_mysql_connection == NULL) {
+		printf("%s\n", mysql_error(g_mysql_connection));
+		return 1;
+  	}
+
+	if (mysql_real_connect(g_mysql_connection, "mysql", "root", "password",
+			"vicerp", 0, NULL, 0) == NULL) {
+		printf("%s\n", mysql_error(g_mysql_connection));
+		mysql_close(g_mysql_connection);
+		return 1;
+	}
+  	
+	db_create_t_players();
+}
+
+void db_deinit()
+{
+	mysql_close(g_mysql_connection);
+}
+
+#define MAX_PLAYER_NAME 64
+
+int is_player_registered(const char *plr_name)
+{
+	char statement[512];
+
+	char to[MAX_PLAYER_NAME + 1];
+	unsigned long len;
+
+	len = mysql_real_escape_string(g_mysql_connection, to, plr_name, strlen(plr_name));
+	to[len] = '\0';
+
+	snprintf(statement, sizeof(statement), "SELECT `id` FROM `players` WHERE `name` = '%s' LIMIT 1", to);
+
+	/*printf("%s\n", statement);*/
+
+	if (mysql_query(g_mysql_connection, statement) == 0) {
+		MYSQL_RES *result = mysql_store_result(g_mysql_connection);
+
+		if (result != NULL) {
+			int num_rows = mysql_num_rows(result);
+			/*printf("num rows = %d\n", num_rows);*/
+
+			if (num_rows >= 1) {
+				return 1;
+			}
+
+			mysql_free_result(result);
+		}
+		else {
+			printf("%s\n", mysql_error(g_mysql_connection));
+		}
+	}
+	else {
+		printf("%s\n", mysql_error(g_mysql_connection));
+	}
+
+	return 0;
+}
+
 uint8_t on_server_init()
 {
 	int err;
 
-	err = redis_init();
-	if (err) {
+	err = db_init();
+	/* if (err) {
 		return 0;
-	}
+	} */
+
+	err = redis_init();
+	/* if (err) {
+		return 0;
+	} */
 
 	redis_flush();
 
@@ -940,6 +1023,11 @@ void on_player_connect(int32_t player_id)
 	g_plugin_funcs->SendClientMessage(player_id, COLOR_YELLOW,
 		"** pm >> Welcome to %s. Enter /help for more information",
 		SERVER_NAME);
+
+	if (!is_player_registered(player_name)) {
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY,
+			"** pm >> You are not registered");
+	}
 }
 
 void on_player_disconnect(int32_t player_id, vcmpDisconnectReason reason)

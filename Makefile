@@ -1,10 +1,13 @@
 all: build install
 
 build:
-	gcc -shared -fPIC main.c -o libvicerp.so -lhiredis -I/usr/include/hiredis -Wall -I./
+	gcc -shared -fPIC ./src/main.c -o ./src/libvicerp.so -lhiredis -I/usr/include/hiredis -Wall -I./ `mysql_config --libs` `mysql_config --cflags`
 
 install:
-	mv ./libvicerp.so ./plugins
+	mv ./src/libvicerp.so ./src/plugins
 
 run:
 	./mpsvrrel64
+
+docker:
+	docker-compose up -d

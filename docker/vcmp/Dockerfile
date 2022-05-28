@@ -3,8 +3,8 @@ FROM ubuntu:18.04
 # update packages
 RUN apt-get update -y && apt-get upgrade -y
 
-# install hiredis (redis library)
-RUN apt-get install -y libhiredis0.13
+# install libraries
+RUN apt-get install -y libhiredis0.13 libmysqlclient-dev
 
 # create a user group 'xyzgroup'
 RUN groupadd --gid 2000 xyzgroup
@@ -18,7 +18,7 @@ USER appuser
 # copy files
 WORKDIR /home/appuser
 RUN mkdir plugins
-COPY mpsvrrel64 .
+COPY ./src/mpsvrrel64 .
 
 # open mapper port
 EXPOSE 8192

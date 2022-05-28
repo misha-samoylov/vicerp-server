@@ -34,6 +34,7 @@ docker-compose up -d
 **GNU/Linux build**
 * [Redis](https://redis.io/)
 * [hiredis](https://redis.io/)
+* libmysqlclient-dev
 * [make](https://www.gnu.org/software/make/)
 
 **Docker build**
