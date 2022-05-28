@@ -133,19 +133,13 @@ void redis_dec_plr_cash(int32_t plr_id, int amount)
 
 bool redis_is_plr_logged_in(int32_t plr_id)
 {
-	redisReply *reply;
-	bool ret;
+	int logged_in;
+	logged_in = redis_get_plr_field(plr_id, "logged_in");
 
-	ret = false;
-	reply = redisCommand(g_redis_context, "HGET user:%d logged_in", plr_id);
+	if (logged_in)
+		return true;
 
-	if (reply->type == REDIS_REPLY_STRING) 
-		if (strcmp(reply->str, "1") == 0)
-			ret = true;
-
-	freeReplyObject(reply);
-
-	return ret;
+	return false;
 }
 
 void redis_set_user_online(char *player_name)
