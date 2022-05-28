@@ -105,6 +105,8 @@ int redis_get_plr_field(int32_t plr_id, char *field)
 	if (reply->type == REDIS_REPLY_STRING)
 		val = atoi(reply->str);
 
+	freeReplyObject(reply);
+
 	return val;
 }
 
