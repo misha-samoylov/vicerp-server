@@ -89,8 +89,45 @@ void redis_deinit()
 
 void redis_set_plr_logged_in(int32_t plr_id, char *plr_name)
 {
-	redisCommand(g_redis_context, "HSET user:%d name %s logged_in 1 "
-		"bank 0 cash 0", plr_id, plr_name);
+	redisCommand(g_redis_context, "HSET user:%d name %s logged_in 1",
+		plr_id, plr_name);
+}
+
+int redis_get_plr_field(int32_t plr_id, char *field)
+{
+	redisReply *reply;
+	int val;
+
+	val = 0;
+	reply = redisCommand(g_redis_context, "HGET user:%d %s", plr_id, field);
+
+	if (reply->type == REDIS_REPLY_STRING)
+		val = atoi(reply->str);
+
+	return val;
+}
+
+int redis_get_plr_cash(int32_t plr_id)
+{
+	return redis_get_plr_field(plr_id, "cash");
+}
+
+void redis_inc_plr_cash(int32_t plr_id, int amount)
+{
+	int ncash;
+
+	ncash = redis_get_plr_cash(plr_id);
+	redisCommand(g_redis_context, "HSET user:%d cash %d", plr_id,
+		ncash + amount);
+}
+
+void redis_dec_plr_cash(int32_t plr_id, int amount)
+{
+	int ncash;
+
+	ncash = redis_get_plr_cash(plr_id);
+	redisCommand(g_redis_context, "HSET user:%d cash %d", plr_id,
+		ncash - amount);
 }
 
 bool redis_is_plr_logged_in(int32_t plr_id)
@@ -125,8 +162,12 @@ int redis_get_count_users_online()
 	redisReply *reply;
 	int online_users;
 
+	online_users = 0;
+
 	reply = redisCommand(g_redis_context, "SCARD online_users");
-	online_users = reply->integer;
+
+	if (reply->type == REDIS_REPLY_INTEGER)
+		online_users = reply->integer;
 
 	freeReplyObject(reply);
 
@@ -744,12 +785,12 @@ void db_deinit()
 int register_player_name(char *plr_name, char *passwd)
 {
 	char statement[512];
-	int num_rows;
+	int id;
 
 	char to[MAX_PLAYER_NAME + 1];
 	unsigned long len;
 
-	num_rows = 0;
+	id = 0;
 	len = mysql_real_escape_string(g_mysql_connection, to, plr_name,
 		strlen(plr_name));
 	to[len] = '\0';
@@ -759,12 +800,12 @@ int register_player_name(char *plr_name, char *passwd)
 		to, passwd);
 
 	if (mysql_query(g_mysql_connection, statement) == 0) {
-		num_rows = mysql_affected_rows(g_mysql_connection);
+		id = mysql_insert_id(g_mysql_connection);
 	} else {
 		printf("%s\n", mysql_error(g_mysql_connection));
 	}
 
-	return num_rows;
+	return id;
 }
 
 int is_valid_player_passwd(char *plr_name, char *passwd)
@@ -782,7 +823,8 @@ int is_valid_player_passwd(char *plr_name, char *passwd)
 	to[len] = '\0';
 
 	snprintf(statement, sizeof(statement),
-		"SELECT `password` FROM `players` WHERE `name` = '%s' AND `password` = SHA1('%s') LIMIT 1",
+		"SELECT `password` FROM `players` "
+		"WHERE `name` = '%s' AND `password` = SHA1('%s') LIMIT 1",
 		to, passwd);
 
 	if (mysql_query(g_mysql_connection, statement) == 0) {
@@ -798,6 +840,91 @@ int is_valid_player_passwd(char *plr_name, char *passwd)
 	}
 
 	return num_rows;
+}
+
+int db_get_plr_id(char *plr_name)
+{
+	char query[512];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int val;
+
+	char to[MAX_PLAYER_NAME + 1];
+	unsigned long len;
+
+	val = 0;
+	len = mysql_real_escape_string(g_mysql_connection, to, plr_name,
+		strlen(plr_name));
+	to[len] = '\0';
+
+	snprintf(query, sizeof(query),
+		"SELECT `id` FROM `players` WHERE `name` = '%s' LIMIT 1", to);
+
+	if (mysql_query(g_mysql_connection, query) == 0) {
+		result = mysql_store_result(g_mysql_connection);
+
+		if (result != NULL) {
+			row = mysql_fetch_row(result);
+			val = atoi(row[0]);
+			mysql_free_result(result);
+		} else
+			printf("%s\n", mysql_error(g_mysql_connection));
+	} else
+		printf("%s\n", mysql_error(g_mysql_connection));
+
+	return val;
+}
+
+int db_get_plr_cash(int db_plr_id)
+{
+	char query[512];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int val;
+
+	val = 0;
+	snprintf(query, sizeof(query),
+		"SELECT `cash` FROM `players` WHERE `id` = '%d' LIMIT 1", db_plr_id);
+
+	if (mysql_query(g_mysql_connection, query) == 0) {
+		result = mysql_store_result(g_mysql_connection);
+
+		if (result != NULL) {
+			row = mysql_fetch_row(result);
+			val = atoi(row[0]);
+			mysql_free_result(result);
+		} else
+			printf("%s\n", mysql_error(g_mysql_connection));
+	} else
+		printf("%s\n", mysql_error(g_mysql_connection));
+
+	return val;
+}
+
+int db_set_plr_cash(int db_plr_id, int amount)
+{
+	char query[512];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int val;
+
+	val = 0;
+	snprintf(query, sizeof(query),
+		"UPDATE `players` SET `cash` = '%d' "
+		"WHERE `id` = '%d'", amount, db_plr_id);
+
+	if (mysql_query(g_mysql_connection, query) == 0) {
+		result = mysql_store_result(g_mysql_connection);
+
+		if (result != NULL) {
+			row = mysql_affected_rows(result);
+			val = atoi(row[0]);
+			mysql_free_result(result);
+		}
+	} else
+		printf("%s\n", mysql_error(g_mysql_connection));
+
+	return val;
 }
 
 int is_player_registered(char *plr_name)
@@ -829,6 +956,29 @@ int is_player_registered(char *plr_name)
 	}
 
 	return num_rows;
+}
+
+int get_plr_cash(int32_t plr_id)
+{
+	return redis_get_plr_cash(plr_id);
+}
+
+void dec_plr_cash(int32_t plr_id, int val)
+{
+	redis_dec_plr_cash(plr_id, val);
+	g_plugin_funcs->GivePlayerMoney(plr_id, -val);
+}
+
+void set_plr_cash(int32_t plr_id, int val)
+{
+	redisCommand(g_redis_context, "HSET user:%d cash %d", plr_id, val);
+	g_plugin_funcs->SetPlayerMoney(plr_id, val);
+}
+
+void inc_plr_cash(int32_t plr_id, int val)
+{
+	redis_dec_plr_cash(plr_id, val);
+	g_plugin_funcs->GivePlayerMoney(plr_id, val);
 }
 
 uint8_t on_server_init()
@@ -902,6 +1052,9 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	else if (strncmp(message, "login", strlen("login")) == 0) {
 		char cmd[64];
 		char param[64];
+		char msg[256];
+		int db_plr_id;
+		int cash;
 
 		sscanf(message, "%s%s", cmd, param);
 
@@ -913,10 +1066,14 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 				"** pm >> You already logged in");
 		} else {
 			if (is_valid_player_passwd(player_name, param)) {
-				g_plugin_funcs->SendClientMessage(player_id, COLOR_GREEN,
-					"** pm >> You successfully logged in");
+				db_plr_id = db_get_plr_id(player_name);
+				cash = db_get_plr_cash(db_plr_id);
 
 				redis_set_plr_logged_in(player_id, player_name);
+				set_plr_cash(player_id, cash);
+
+				sprintf(msg, ">> %s logged in. Cash: $%d", player_name, cash);
+				send_client_message_to_all(COLOR_GREY, msg);
 			} else {
 				g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 					"** pm >> Password is not valid");
@@ -926,24 +1083,28 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	else if (strncmp(message, "register", strlen("register")) == 0) {
 		char cmd[64];
 		char param[64];
-		int ret;
+		int db_plr_id;
+		int start_money;
 
-		ret = 0;
+		start_money = MONEY_START;
+		db_plr_id = 0;
 		sscanf(message, "%s%s", cmd, param);
 
 		if (redis_is_plr_logged_in(player_id)) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
-				"** pm >> You cannot register because logged in account");
+				"** pm >> You cannot register again");
 		} else if (is_player_registered(player_name)) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 				"** pm >> That's nick-name is already registered");
 		} else {
-			ret = register_player_name(player_name, param);
+			db_plr_id = register_player_name(player_name, param);
 
-			if (ret) {
+			if (db_plr_id) {
 				g_plugin_funcs->SendClientMessage(player_id, COLOR_GREEN,
 					"** pm >> You successfully registered. "
-					"Now you can logged in /login");
+					"Now you can logged in. Enter /login");
+
+				db_set_plr_cash(db_plr_id, start_money);
 			} else {
 				g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 					"** pm >> Unknown error. Cannot register account");
@@ -962,12 +1123,22 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		int32_t color1, color2;
 		float world;
 		int finded;
+		int cost;
 
 		finded = 0;
 		sscanf(message, "%s%s", cmd, param);
 		veh_id = atoi(param);
+		cost = COST_SPAWN;
 
-		if (veh_id == 0) {
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+			return 1;
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+			return 1;
+		} else if (veh_id == 0) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 				"** pm >> Cannot find vehicle");
 			return 1;
@@ -1009,63 +1180,133 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 		g_plugin_funcs->CreateVehicle(veh_id, world, x + 1, y, z + 1, angle,
 			color1,	color2);
 
-		sprintf(msg, ">> %s spawned vehicle %d (/spawn)", player_name, veh_id);
+		sprintf(msg, ">> %s spawned vehicle %d (/spawn). Cost: $%d",
+			player_name, veh_id, cost);
 		send_client_message_to_all(COLOR_GREY, msg);
+
+		dec_plr_cash(player_id, cost);
 
 		return 1;
 	}
 	else if (strcmp(message, "dm") == 0) {
 		char msg[256];
+		int cost;
 
-		g_plugin_funcs->SetPlayerPosition(player_id,
-			-543.463013, 797.462585, 195.213089);
-		g_plugin_funcs->SetPlayerHeading(player_id, -1.765160);
+		cost = COST_DM;
 
-		sprintf(msg, ">> %s teleported to DM (/dm)", player_name);
-		send_client_message_to_all(COLOR_GREY, msg);
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+		} else {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+					"** pm >> You need atleast $%d", cost);
+
+			g_plugin_funcs->SetPlayerPosition(player_id,
+				-543.463013, 797.462585, 195.213089);
+			g_plugin_funcs->SetPlayerHeading(player_id, -1.765160);
+
+			sprintf(msg, ">> %s teleported to DM (/dm). Cost: $%d",
+				player_name, cost);
+			send_client_message_to_all(COLOR_GREY, msg);
+
+			dec_plr_cash(player_id, cost);
+		}
 
 		return 1;
 	}
 	else if (strcmp(message, "repair") == 0) {
 		char msg[256];
 
+		int cost;
 		float health;
 		int32_t vehicle_id;
 
+		cost = COST_REPAIR;
 		health = 1000.0;
 		vehicle_id = g_plugin_funcs->GetPlayerVehicleId(player_id);
 
-		if (g_plugin_funcs->GetLastError() == vcmpErrorNoSuchEntity) {
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+		} else if (g_plugin_funcs->GetLastError() == vcmpErrorNoSuchEntity) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, 
 				"** pm >> You need to be in vehicle");
+		} else {
+			g_plugin_funcs->SetVehicleHealth(vehicle_id, health);
+			g_plugin_funcs->SetVehicleDamageData(vehicle_id, 0);
+
+			sprintf(msg, ">> %s fixed a vehicle (/repair). Cost: $%d",
+				player_name, cost);
+			send_client_message_to_all(COLOR_GREY, msg);
+
+			dec_plr_cash(player_id, cost);
 		}
-
-		g_plugin_funcs->SetVehicleHealth(vehicle_id, health);
-		g_plugin_funcs->SetVehicleDamageData(vehicle_id, 0);
-
-		sprintf(msg, ">> %s fixed a vehicle (/repair)", player_name);
-		send_client_message_to_all(COLOR_GREY, msg);
 
 		return 1;
 	}
 	else if (strcmp(message, "heal") == 0) {
 		char msg[256];
 		float max_health;
+		int cost;
 
+		cost = COST_HEAL;
 		max_health = 100.0f;
 
-		g_plugin_funcs->SetPlayerHealth(player_id, max_health);
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+		} else {
 
-		sprintf(msg, ">> %s bought health (/heal)", player_name);
-		send_client_message_to_all(COLOR_GREY, msg);
+			g_plugin_funcs->SetPlayerHealth(player_id, max_health);
+
+			sprintf(msg, ">> %s bought health (/heal). Cost: $%d",
+				player_name, cost);
+			send_client_message_to_all(COLOR_GREY, msg);
+
+			dec_plr_cash(player_id, cost);
+		}
 
 		return 1;
-	} 
+	}
+	else if (strcmp(message, "cash") == 0) {
+		char msg[256];
+		int cash;
+
+		cash = get_plr_cash(player_id);
+
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else {
+			sprintf(msg, ">> %s cash: $%d", player_name, cash);
+			send_client_message_to_all(COLOR_GREY, msg);
+		}
+
+		return 1;
+	}
 	else if (strncmp(message, "we", strlen("we")) == 0) {
 		int32_t weapon_id;
+		int cost;
+
+		cost = COST_WE;
 		weapon_id = find_weapon_id_from_string(message);
 
-		if (weapon_id == -1) {
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+		} else if (weapon_id == -1) {
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 				"** pm >> Unknown weapon name. Example: /we colt");
 		} else {
@@ -1078,8 +1319,11 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 			g_plugin_funcs->GivePlayerWeapon(player_id, weapon_id, ammo);			
 			weapon_name = get_weapon_name_from_id(weapon_id);
 
-			sprintf(msg, ">> %s bought weapon %s (/we)", player_name, weapon_name);
+			sprintf(msg, ">> %s bought weapon %s (/we). Cost: $%d",
+				player_name, weapon_name, cost);
 			send_client_message_to_all(COLOR_GREY, msg);
+
+			dec_plr_cash(player_id, cost);
 		}
 
 		return 1;
@@ -1087,13 +1331,26 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	else if (strcmp(message, "armour") == 0) {
 		float max_armour;
 		char msg[256];
+		int cost;
 
+		cost = COST_ARMOUR;
 		max_armour = 100.0f;
 
-		g_plugin_funcs->SetPlayerArmour(player_id, max_armour);
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+		} else {
+			g_plugin_funcs->SetPlayerArmour(player_id, max_armour);
 
-		sprintf(msg, ">> %s bought armour (/armour)", player_name);
-		send_client_message_to_all(COLOR_GREY, msg);
+			sprintf(msg, ">> %s bought armour (/armour). Cost: $%d",
+				player_name, cost);
+			send_client_message_to_all(COLOR_GREY, msg);
+
+			dec_plr_cash(player_id, cost);
+		}
 
 		return 1;
 	}
@@ -1139,15 +1396,30 @@ void on_player_connect(int32_t player_id)
 		SERVER_NAME);
 
 	if (!is_player_registered(player_name)) {
-		g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY,
-			"** pm >> You are not registered");
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_WHITE,
+			"** pm >> You are not registered. Enter /register");
+	} else {
+		g_plugin_funcs->SendClientMessage(player_id, COLOR_WHITE,
+			"** pm >> Please log in into account. Enter /login");
 	}
 }
 
 void on_player_disconnect(int32_t player_id, vcmpDisconnectReason reason)
 {
-	char player_name[64];
+	char player_name[MAX_PLAYER_NAME];
     g_plugin_funcs->GetPlayerName(player_id, player_name, sizeof(player_name));
+
+	if (redis_is_plr_logged_in(player_id)) {
+		int cash;
+		int db_plr_id;
+
+		cash = get_plr_cash(player_id);
+		db_plr_id = db_get_plr_id(player_name);
+		db_set_plr_cash(db_plr_id, cash);
+
+		/* remove tmp user info */
+		redisCommand(g_redis_context, "DEL user:%d", player_id);
+	}
 
 	redis_set_user_offline(player_name);
 }
@@ -1166,6 +1438,9 @@ void on_player_death(int32_t player_id, int32_t killer_id, int32_t reason,
 		char killer_name[64];
 		char *weapon_name;
 		int32_t score;
+		int money;
+
+		money = MONEY_KILLER;
 
 		g_plugin_funcs->GetPlayerName(killer_id, killer_name, 
 			sizeof(killer_name));
@@ -1174,8 +1449,12 @@ void on_player_death(int32_t player_id, int32_t killer_id, int32_t reason,
 		score = g_plugin_funcs->GetPlayerScore(killer_id);
 		g_plugin_funcs->SetPlayerScore(killer_id, score + 1);
 
-		sprintf(msg, ">> %s killed %s (%s)", killer_name, player_name,
-			weapon_name);
+		if (redis_is_plr_logged_in(killer_id)) {
+			inc_plr_cash(killer_id, money);
+		}
+
+		sprintf(msg, ">> %s (+$%d) killed %s (%s)", killer_name, money,
+			player_name, weapon_name);
 	}
 
 	send_client_message_to_all(COLOR_GREY, msg);
@@ -1202,6 +1481,32 @@ uint8_t on_player_request_spawn(int32_t plr_id)
 	return 1;
 }
 
+void on_srv_frame(float elapsed_time)
+{
+	int hour;
+	int min;
+	int i;
+	uint32_t max_players;
+	int money;
+
+	hour = g_plugin_funcs->GetHour();
+	min = g_plugin_funcs->GetMinute();
+	max_players = g_plugin_funcs->GetMaxPlayers();
+	money = MONEY_DAY;
+
+	/* every 00:00 players take money */
+	if (hour == 00 && min == 00) {
+		for (i = 0; i < max_players; i++) {
+			if (redis_is_plr_logged_in(i)) {
+				inc_plr_cash(i, money);
+
+				g_plugin_funcs->SendClientMessage(i, COLOR_YELLOW,
+					"** pm >> You take $%d for game day", money);
+			}
+		}
+	}
+}
+
 unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	PluginCallbacks* plugin_calls, PluginInfo* plugin_info)
 {
@@ -1219,6 +1524,7 @@ unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	plugin_calls->OnPlayerConnect = on_player_connect;
 	plugin_calls->OnPlayerDisconnect = on_player_disconnect;
 	plugin_calls->OnPlayerDeath = on_player_death;
+	plugin_calls->OnServerFrame = on_srv_frame;
 
 	return 1;
 }
