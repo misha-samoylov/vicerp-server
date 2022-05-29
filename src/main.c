@@ -776,6 +776,10 @@ int db_init()
 		return 1;
 	}
 
+	/* auto reconnect to db mysql */
+	my_bool reconnect = 0;
+	mysql_options(g_mysql_connection, MYSQL_OPT_RECONNECT, &reconnect);
+
 	return 0;
 }
 
