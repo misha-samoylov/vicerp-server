@@ -975,7 +975,7 @@ void set_plr_cash(int32_t plr_id, int val)
 
 void inc_plr_cash(int32_t plr_id, int val)
 {
-	redis_dec_plr_cash(plr_id, val);
+	redis_inc_plr_cash(plr_id, val);
 	g_plugin_funcs->GivePlayerMoney(plr_id, val);
 }
 
@@ -1488,23 +1488,31 @@ void on_srv_frame(float elapsed_time)
 	int money;
 	uint8_t is_plr_connected;
 
+	static int last_hour;
+	static int last_minute;
+
 	hour = g_plugin_funcs->GetHour();
 	min = g_plugin_funcs->GetMinute();
 	max_players = g_plugin_funcs->GetMaxPlayers();
 	money = MONEY_DAY;
 
 	/* every 00:00 players take money */
-	if (hour == 00 && min == 00) {
-		for (i = 0; i < max_players; i++) {
-			is_plr_connected = g_plugin_funcs->IsPlayerConnected(i);
+	if (last_hour != hour || last_minute != min) {
+		if (hour == 00 && min == 00) {
+			for (i = 0; i < max_players; i++) {
+				is_plr_connected = g_plugin_funcs->IsPlayerConnected(i);
 
-			if (is_plr_connected && redis_is_plr_logged_in(i)) {
-				inc_plr_cash(i, money);
+				if (is_plr_connected && redis_is_plr_logged_in(i)) {
+					inc_plr_cash(i, money);
 
-				g_plugin_funcs->SendClientMessage(i, COLOR_YELLOW,
-					"** pm >> You take $%d for game day", money);
+					g_plugin_funcs->SendClientMessage(i, COLOR_YELLOW,
+						"** pm >> You take $%d for game day", money);
+				}
 			}
 		}
+
+		last_hour = hour;
+		last_minute = min;
 	}
 }
 
