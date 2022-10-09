@@ -3,41 +3,24 @@ Open source code vicerp-server. Server uses [VCMP Plugin SDK](https://forum.vc-m
 
 ## Build
 
-### GNU/Linux
-
-**Install redis server**
 ```console
-apt-get install -y redis  
-apt-get install -y libhiredis0.13
-````
-
-Edit file `config.h` define `REDIS_SERVER` to address redis server. For example:
-
-````c
-#define REDIS_SERVER "127.0.0.1"
-````
-
-**Build and run**
-```console
-make
-make run
-````
-
-### Docker
-```console
+apt-get install -y libhiredis0.13 libmysqlclient-dev
+make build
+make install
 docker-compose build
 docker-compose up -d
 ````
 
+### Rebuild and restart server
+```console
+make all
+````
+
 ## Dependencies
 
-**GNU/Linux build**
-* [Redis](https://redis.io/)
-* [hiredis](https://redis.io/)
+* libhiredis0.13
 * libmysqlclient-dev
 * [make](https://www.gnu.org/software/make/)
-
-**Docker build**
 * [Docker](https://www.docker.com/)
 * [docker-compose](https://docs.docker.com/compose/)
 

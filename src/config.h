@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 #define SERVER_NAME "ViceRP"
-#define SERVER_GAMEMODE "TDM RP 0.2"
+#define SERVER_GAMEMODE "TDM RP 0.2.1"
 
 #define MYSQL_SERVER "mysql"
 #define MYSQL_USER "root"

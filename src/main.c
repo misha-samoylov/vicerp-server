@@ -1186,6 +1186,28 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 		return 1;
 	}
+	else if (strncmp(message, "sethour", strlen("sethour")) == 0) {
+		char cmd[64];
+		char param[64];
+
+		sscanf(message, "%s%s", cmd, param);
+		int hour = atoi(param);
+
+		g_plugin_funcs->SetHour(hour);
+
+		return 1;
+	}
+	else if (strncmp(message, "setweather", strlen("setweather")) == 0) {
+		char cmd[64];
+		char param[64];
+
+		sscanf(message, "%s%s", cmd, param);
+		int weather_id = atoi(param);
+
+		g_plugin_funcs->SetWeather(weather_id);
+
+		return 1;
+	}
 	else if (strcmp(message, "dm") == 0) {
 		char msg[256];
 		int cost;
