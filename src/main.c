@@ -8,17 +8,8 @@
 #include <hiredis.h>
 
 #include "plugin.h"
-#include "config.h"
-
-#define COLOR_GREEN 0x33AA33AA
-#define COLOR_RED 0xFF0000FF
-#define COLOR_GREY 0xAFAFAFAA
-#define COLOR_WHITE 0xFFFFFFAA
-#define COLOR_YELLOW 0xFFFF00AA
-#define COLOR_BLUE 0x0000FFFF
-
-#define MAX_PLAYER_NAME 64
-#define UNKNOWN_KILLER_ID -1
+#include "vicerp.h"
+#include "connections.h"
 
 PluginFuncs *g_plugin_funcs;
 redisContext *g_redis_context;
@@ -979,6 +970,50 @@ void inc_plr_cash(int32_t plr_id, int val)
 	g_plugin_funcs->GivePlayerMoney(plr_id, val);
 }
 
+void register_keys()
+{
+	g_plugin_funcs->RegisterKeyBind(BIND_KEY_1, 1, 
+		KEY_1, 
+		0, 
+		0);
+
+	g_plugin_funcs->RegisterKeyBind(BIND_KEY_2, 1,
+		KEY_2, 
+		0,
+		0);
+
+	g_plugin_funcs->RegisterKeyBind(7, 1,
+		KEY_3, 
+		0,
+		0);
+
+	g_plugin_funcs->RegisterKeyBind(8, 1,
+		KEY_4, 
+		0,
+		0);
+}
+
+void on_player_key_bind_up(int32_t player_id, int32_t bind_id)
+{
+	vcmpPlayerState state = g_plugin_funcs->GetPlayerState(player_id);
+
+	if (bind_id == BIND_KEY_1) {
+		if (state == vcmpPlayerStateNormal) {
+			on_player_command(player_id, "heal");
+		} else if (state == vcmpPlayerStateDriver) {
+			on_player_command(player_id, "repair");
+		}
+	}
+
+	if (bind_id == BIND_KEY_2) {
+		if (state == vcmpPlayerStateNormal) {
+			on_player_command(player_id, "armour");
+		} else if (state == vcmpPlayerStateDriver) {
+			on_player_command(player_id, "nitro");
+		}
+	}
+}
+
 uint8_t on_server_init()
 {
 	int err;
@@ -1000,6 +1035,8 @@ uint8_t on_server_init()
 	init_pickups();
 	init_skins();
 	init_vehicles();
+
+	register_keys();
 
 	return 1;
 }
@@ -1186,6 +1223,37 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 		return 1;
 	}
+	else if (strcmp(message, "nitro") == 0) {
+		int cost;
+		vcmpPlayerState state;
+
+		state = g_plugin_funcs->GetPlayerState(player_id);
+		cost = COST_NITRO;
+
+		if (!redis_is_plr_logged_in(player_id)) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need to be logged in");
+		} else if (get_plr_cash(player_id) < cost) {
+			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
+				"** pm >> You need atleast $%d", cost);
+		} else if (state != vcmpPlayerStateDriver) {
+				g_plugin_funcs->SendClientMessage(player_id, COLOR_RED, 
+					"** pm >> You need to be a driver"
+				);
+		} else {
+			float x, y, z;
+
+			int vehicleId = g_plugin_funcs->GetPlayerVehicleId(player_id);
+			g_plugin_funcs->SendGameMessage(player_id, 0, "Nitro");
+			
+			g_plugin_funcs->GetVehicleSpeed(vehicleId, &x, &y, &z, 0);
+			g_plugin_funcs->SetVehicleSpeed(vehicleId, x, y, z, 1, 0);
+
+			dec_plr_cash(player_id, cost);
+		}
+
+		return 1;
+	}
 	else if (strncmp(message, "sethour", strlen("sethour")) == 0) {
 		char cmd[64];
 		char param[64];
@@ -1221,9 +1289,6 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 				"** pm >> You need atleast $%d", cost);
 		} else {
-			g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
-					"** pm >> You need atleast $%d", cost);
-
 			g_plugin_funcs->SetPlayerPosition(player_id,
 				-543.463013, 797.462585, 195.213089);
 			g_plugin_funcs->SetPlayerHeading(player_id, -1.765160);
@@ -1265,6 +1330,8 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 				player_name, cost);
 			send_client_message_to_all(COLOR_GREY, msg);
 
+			g_plugin_funcs->SendGameMessage(player_id, 0, "Repair");
+
 			dec_plr_cash(player_id, cost);
 		}
 
@@ -1291,6 +1358,8 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 			sprintf(msg, ">> %s bought health (/heal). Cost: $%d",
 				player_name, cost);
 			send_client_message_to_all(COLOR_GREY, msg);
+
+			g_plugin_funcs->SendGameMessage(player_id, 0, "Heal");
 
 			dec_plr_cash(player_id, cost);
 		}
@@ -1368,6 +1437,8 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 			sprintf(msg, ">> %s bought armour (/armour). Cost: $%d",
 				player_name, cost);
 			send_client_message_to_all(COLOR_GREY, msg);
+
+			g_plugin_funcs->SendGameMessage(player_id, 0, "Armour");
 
 			dec_plr_cash(player_id, cost);
 		}
@@ -1556,6 +1627,7 @@ unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	plugin_calls->OnPlayerDisconnect = on_player_disconnect;
 	plugin_calls->OnPlayerDeath = on_player_death;
 	plugin_calls->OnServerFrame = on_srv_frame;
+	plugin_calls->OnPlayerKeyBindUp = on_player_key_bind_up;
 
 	return 1;
 }
