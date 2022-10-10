@@ -1109,6 +1109,8 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 
 				sprintf(msg, ">> %s logged in. Cash: $%d", player_name, cash);
 				send_client_message_to_all(COLOR_GREY, msg);
+
+				g_plugin_funcs->ForcePlayerSpawn(player_id);
 			} else {
 				g_plugin_funcs->SendClientMessage(player_id, COLOR_RED,
 					"** pm >> Password is not valid");
@@ -1462,13 +1464,18 @@ uint8_t on_player_command(int32_t player_id, const char* message)
 	return 0;
 }
 
-void on_player_spawn(int32_t player_id)
+void on_player_spawn(int32_t plr_id)
 {
-	char player_name[64];
-	g_plugin_funcs->GetPlayerName(player_id, player_name, sizeof(player_name));
+	char plr_name[64];
+	char msg[256];
 
-	g_plugin_funcs->SendClientMessage(player_id, COLOR_GREY, ">> %s spawned",
-		player_name);
+	g_plugin_funcs->GetPlayerName(plr_id, plr_name, sizeof(plr_name));
+
+	g_plugin_funcs->SendClientMessage(plr_id, COLOR_GREY, 
+		"** pm >> You can use: [Key 1] to buy health, [Key 2] to buy armour");
+
+	sprintf(msg, ">> %s spawned", plr_name);
+	send_client_message_to_all(COLOR_GREY, msg);	
 }
 
 void on_player_connect(int32_t player_id)
@@ -1609,6 +1616,12 @@ void on_srv_frame(float elapsed_time)
 	}
 }
 
+void on_plr_enter_vehicle(int32_t plr_id, int32_t veh_id, int32_t slot_index)
+{
+	g_plugin_funcs->SendClientMessage(plr_id, COLOR_GREY, 
+		"** pm >> You can use: [Key 1] to use repair, [Key 2] to use nitro");
+}
+
 unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	PluginCallbacks* plugin_calls, PluginInfo* plugin_info)
 {
@@ -1628,6 +1641,7 @@ unsigned int VcmpPluginInit(PluginFuncs* plugin_funcs,
 	plugin_calls->OnPlayerDeath = on_player_death;
 	plugin_calls->OnServerFrame = on_srv_frame;
 	plugin_calls->OnPlayerKeyBindUp = on_player_key_bind_up;
+	plugin_calls->OnPlayerEnterVehicle = on_plr_enter_vehicle;
 
 	return 1;
 }
