@@ -2,3 +2,4 @@ server_log.txt
 plugins/
 .vscode
 docker/mysql/data
+src/libvicerp.so
